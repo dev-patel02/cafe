@@ -25,7 +25,7 @@ const getTenantConnection = async (email) => {
     const subdomain = email.split("@")[1].split(".")[0];
     // Find tenant in master database
     const tenant = await Tenants.findOne({
-      where: { [Op.and]: [{ subdomain  }] },
+      where: { [Op.and]: [{ subdomain }] },
     });
     // console.log(tenant.is_active, !tenant.is_active);
     if (!tenant) {
@@ -51,7 +51,7 @@ const getTenantConnection = async (email) => {
     // Create new connection
     const models = await tenantSeqelize(dbName);
     // console.log(models)
-    return {  models, tenant };
+    return { models, tenant };
   } catch (error) {
     throw error;
   }
@@ -125,6 +125,8 @@ const getTenantConnection = async (email) => {
 const login = async (req, res) => {
   try {
     let { email, password } = req.body;
+    console.log(`\x1b[32m@User Connected: ${email}${password} \x1b[0m`);
+
     // [email, subdomain] = [subdomain, email];
     // Get tenant connection
     const { models } = await getTenantConnection(email);
@@ -172,15 +174,33 @@ const login = async (req, res) => {
     }
 
     // Get user permissions
+    // const permissions = await Permission.findAll({
+    //   where: { role_id: user.role_id },
+    //   include: [
+    //     {
+    //       model: Role,
+    //       as: "role",
+    //       attributes: ["role_id", "name"],
+    //     },
+    //   ],
+    // });
+
     const permissions = await Permission.findAll({
       where: { role_id: user.role_id },
-      include: [
-        {
-          model: Role,
-          as: "role",
-          attributes: ["role_id", "name"],
-        },
+      include: {
+        model: Module,
+        attributes: ["name"],
+      },
+
+      attributes: [
+        "role_id",
+        "module_id",
+        "can_create",
+        "can_view",
+        "can_edit",
+        "can_delete",
       ],
+      // attributes : ["permission_id"]
     });
     // console.log(permissions);
 
@@ -219,7 +239,7 @@ const login = async (req, res) => {
     res.status(200).json({
       message: `Welcome To, ${user.username}! :)`,
       data: {
-         permissions,
+        permissions,
         token: token,
       },
     });
@@ -263,9 +283,8 @@ export const getTanantConnection = async () => {
   // await sequelize.sync({alter:true});
   return { models };
 };
- 
 
- const userLogin = async (req, res) => {
+const userLogin = async (req, res) => {
   try {
     let { email, subdomain, password } = req.body;
     // [email, subdomain] = [subdomain, email];
@@ -452,7 +471,7 @@ const createUser = async (req, res) => {
     //   // ],
     // });
 
-    res.status(201).json({
+    res.status(200).json({
       message: `User created successfully`,
       data: {
         user: newUser,
@@ -467,6 +486,7 @@ const createUser = async (req, res) => {
     });
   }
 };
+
 const createRole = async (req, res) => {
   try {
     const data = req.body;
@@ -476,13 +496,14 @@ const createRole = async (req, res) => {
     const exists = await Role.findOne({ where: { name: data.name } });
     if (exists) return res.json({ message: "Role already exists" });
     const info = await Role.create(data);
-    res.status(201).json({ message: "Role create succesfully" });
+    res.status(200).json({ message: "Role create succesfully" });
   } catch (error) {
     res
       .status(500)
       .json({ message: "Role creating error", error: error.message });
   }
 };
+
 const createModule = async (req, res) => {
   try {
     const data = req.body;
@@ -491,13 +512,14 @@ const createModule = async (req, res) => {
     const exists = await Module.findOne({ where: { name: data.name } });
     if (exists) return res.json({ message: "Feature already exists" });
     const info = await Module.create(data);
-    res.status(201).json({ message: "Feature create succesfully" });
+    res.status(200).json({ message: "Feature create succesfully" });
   } catch (error) {
     res
       .status(500)
       .json({ message: "Feature creating error", error: error.message });
   }
 };
+
 const createPermission = async (req, res) => {
   try {
     const data = req.body;
@@ -511,7 +533,7 @@ const createPermission = async (req, res) => {
     if (exists)
       return res.json({ message: "Permission For That ROle already exists" });
     const info = await Permission.create(data);
-    res.status(201).json({ message: "Permission create succesfully" });
+    res.status(200).json({ message: "Permission create succesfully" });
   } catch (error) {
     res.status(500).json({
       message: "Permission creating error",
@@ -519,24 +541,54 @@ const createPermission = async (req, res) => {
     });
   }
 };
+
+const getAllUser = async (req, res) => {
+  try {
+    const { models } = await getTenantConnection(req.jwtData.email);
+    const { User, Role } = models;
+    const exists = await User.findAll({
+      include: {
+        model: Role,
+        as: "role",
+        attributes: ["name"],
+      },
+      attributes: ["user_id", "username", "email", "is_active"],
+    });
+    res.status(200).json({
+      message: "All User Fetched Successfully",
+      data: exists,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "User Fetch error",
+      error: error.message ?? error,
+    });
+  }
+};
+
 const getPermisionByRoles = async (req, res) => {
   try {
-    const { id } = req.params;
-    const { models, tenant } = await getTenantConnection(req.jwtData.email);
-    const { Permission, Role } = models;
-    const exists = await Permission.findOne({
-      include: [
-        {
-          model: Role,
-          as: "role",
-          attributes: ["role_id", "name"],
-        },
-      ],
-      where: {
-        [Op.and]: [{ role_id: id }],
+    const { role_id, email } = req.jwtData;
+    const { models, tenant } = await getTenantConnection(email);
+    const { Permission, Module } = models;
+    const permissions = await Permission.findAll({
+      where: { role_id },
+      include: {
+        model: Module,
+        attributes: ["name"],
       },
+
+      attributes: [
+        "role_id",
+        "module_id",
+        "can_create",
+        "can_view",
+        "can_edit",
+        "can_delete",
+      ],
+      // attributes : ["permission_id"]
     });
-    res.status(201).json({ message: "Permission by Role", data: exists });
+    res.status(200).json({ message: "Permission by Role", permissions });
   } catch (error) {
     res.status(500).json({
       message: "Permission creating error",
@@ -560,7 +612,7 @@ const getPermisionByRoles = async (req, res) => {
 //         },
 //       }
 //     );
-//     res.status(201).json({ message: "plane update succesfully" });
+//     res.status(200).json({ message: "plane update succesfully" });
 //   } catch (error) {
 //     res
 //       .status(500)
@@ -574,7 +626,7 @@ const getPermisionByRoles = async (req, res) => {
 //     const deleteplane = await destroy({ where: { id: id } });
 //     if (!deletePlane) return res.json({ message: "plane not found " });
 
-//     res.status(201).json({ message: "plane delete succesfully", deleteplane });
+//     res.status(200).json({ message: "plane delete succesfully", deleteplane });
 //   } catch (error) {
 //     res.status(500).json({ message: "error", error: error.message });
 //   }
@@ -583,6 +635,7 @@ const getPermisionByRoles = async (req, res) => {
 const exportedModules = {
   login,
   createUser,
+  getAllUser,
   createRole,
   createModule,
   createPermission,

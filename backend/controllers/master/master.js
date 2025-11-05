@@ -20,7 +20,7 @@ import Tenents from "../../models/master/tenants.js";
 import sendEmail from "../../config/mail.js";
 import Chat from "../../models/tenant/chat.js";
 import Message from "../../models/tenant/message.js";
-
+// import sendEmail from "../../config/mail.js";
 // let signUp = async (req, res) => {
 //   try {
 //     let data = req.body;
@@ -122,35 +122,34 @@ const signUp = async (req, res) => {
       // Create tenant record in master DB
       let tenant = await Tenents.create(data);
 
-
       //@@ Tenanat Db Creation PHAse
       // Create tenant database
       await sequelize.query(`CREATE DATABASE IF NOT EXISTS ${dbname}`);
 
       // Connect to tenant database
-      let tenantSequelize = tenantSeqelize(dbname);
-
+      let models =await tenantSeqelize(dbname);
+      console.log(models)
       // Initialize models
-      const models = {
-        Role: Roles(tenantSequelize),
-        Permission: Permissions(tenantSequelize),
-        User: tenantUsers(tenantSequelize),
-        Category: Categories(tenantSequelize),
-        Dishes: Dishes(tenantSequelize),
-        Order: Orders(tenantSequelize),
-        OrderItem: OrderItems(tenantSequelize),
-        Billing: Billing(tenantSequelize),
-        Feedback: Feedback(tenantSequelize),
-        Module: Modules(tenantSequelize),
-        Chat: Chat(tenantSequelize),
-        Message: Message(tenantSequelize),
-      };
-      console.log(models);
-      // Setup associations
-      await setupAssociations(models);
+      // const models = {
+      //   Role: Roles(tenantSequelize),
+      //   Permission: Permissions(tenantSequelize),
+      //   User: tenantUsers(tenantSequelize),
+      //   Category: Categories(tenantSequelize),
+      //   Dishes: Dishes(tenantSequelize),
+      //   Order: Orders(tenantSequelize),
+      //   OrderItem: OrderItems(tenantSequelize),
+      //   Billing: Billing(tenantSequelize),
+      //   Feedback: Feedback(tenantSequelize),
+      //   Module: Modules(tenantSequelize),
+      //   Chat: Chat(tenantSequelize),
+      //   Message: Message(tenantSequelize),
+      // };
+      // console.log(models);
+      // // Setup associations
+      // await setupAssociations(models);
 
       // Sync database
-      await tenantSequelize.sync({ force: false });
+      // await tenantSequelize.sync({ force: false });
       // @@ Tanant Db Creation Phase OVer
 
       //@ Send OTP via email
@@ -223,13 +222,7 @@ const signUp = async (req, res) => {
                     </table>
                   </body>
                   </html>`;
-      await models.Role.create({ role_id: 1, name: "Super Admin" });
-      let info = await models.User.create({
-        username: data.restaurant_name,
-        email: data.email,
-        password: data.password,
-        role_id: 1,
-      });
+
       // console.log("ee");
       //@ Send OTP via email
       // let mail = await sendEmail(
@@ -238,6 +231,22 @@ const signUp = async (req, res) => {
       //   message
       // );
       // console.log(info)
+      // await models.Role.create({ role_id: 1, name: "Super Admin" });
+      // let info = await models.User.create({
+      //   username: data.restaurant_name,
+      //   email: data.email,
+      //   password: data.password,
+      //   role_id: 1,
+      // });
+      // console.log("ee");
+      //@ Send OTP via email
+      // let mail = await sendEmail(
+      //   data.email,
+      //   `Welcome to ${data.restaurant_name}`,
+      //   message
+      // );
+      // console.log(info)
+      //@ Send OTP via email
       res.status(201).json({
         message: "Tenant created successfully",
         data: {
@@ -250,6 +259,7 @@ const signUp = async (req, res) => {
       });
     }
   } catch (error) {
+    console.log(error)
     return res.status(500).json({
       error: error.message,
       e: error,

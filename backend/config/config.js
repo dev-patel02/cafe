@@ -120,7 +120,6 @@ const tenantSeqelize = async (dbname) => {
       },
     }
   );
-
   console.log("Tenent Connected SuccessFully");
   // Initialize models
   const models = {
@@ -141,12 +140,22 @@ const tenantSeqelize = async (dbname) => {
   // Setup associations
   await setupAssociations(models);
 
-  // // Test connection
-  // await sequelize.authenticate();
-  // // console.log(sequelize);
-  // await sequelize.sync({ alter: true });
+  // Test connection
+  await sequelize.authenticate();
+  // console.log(sequelize);
+  await sequelize.sync({ alter: false });
+  //create Role
+  // await models.Role.create({ role_id: 1, name: "Super Admin" });
+  // // create User Super Admin
+  // await models.User.create({
+  //   username: data.restaurant_name,
+  //   email: data.email,
+  //   password: data.password,
+  //   role_id: 1,
+  // });
 
-  return models;
+  return models;  // tenet
+  return sequelize;
 };
 // const tenantModels = (sequelize, models) => {
 //   let {

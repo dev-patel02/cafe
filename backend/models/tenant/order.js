@@ -52,3 +52,4 @@ const Orders = (sequelize) => {
 };
 
 export default Orders;
+

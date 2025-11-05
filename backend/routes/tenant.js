@@ -11,6 +11,7 @@ const router = express.Router();
 router.post("/login", tenant.login);
 router.post("/user/login", tenant.userLogin);
 router.post("/user", [authorize, Admin], tenant.createUser);
+router.get("/user", [authorize], tenant.getAllUser);
 
 //role
 router.post("/role", [authorize, Admin], tenant.createRole);
@@ -20,7 +21,7 @@ router.post("/module", [authorize, Admin], tenant.createModule);
 
 //permission
 router.post("/permission", [authorize, Admin], tenant.createPermission);
-router.get("/permission/:id", authorize, tenant.getPermisionByRoles);
+router.get("/permission", authorize, tenant.getPermisionByRoles);
 
 // Catgory
 router.post("/catagory", authorize, catagory.createCategory);
